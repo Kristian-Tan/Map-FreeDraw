@@ -56,6 +56,79 @@
     });
 </script>
 
+<button id="submitSaveFrameToJson">Save Current Frame to JSON</button>
+<script type="text/javascript">
+    $("#submitSaveFrameToJson").click(function(){
+        var jsonstring = JSON.stringify({
+            markers: dataArrMarkers,
+            circles: dataArrCircles,
+            polygons: dataArrPolygons,
+            polylines: dataArrPolylines
+        });
+        var element = document.createElement('a');
+        element.setAttribute('href', 'data:text/text;charset=utf-8,' + encodeURI(jsonstring));
+        element.setAttribute('download', "map_frame.json");
+        element.click();
+    });
+</script>
+<form>
+    Load Frame from JSON
+    <input type="file" id="submitLoadFrameFromJson" onchange="
+        this.files[0].text().then(function(text){
+            console.log(text);
+            var jsonobj = JSON.parse(text);
+            dataArrMarkers = jsonobj.markers;
+            dataArrCircles = jsonobj.circles;
+            dataArrPolygons = jsonobj.polygons;
+            dataArrPolylines = jsonobj.polylines;
+            updateMap();
+            updateTable();
+        });
+    ">
+</form>
+<button id="submitNextFrame">Next Frame</button>
+<script type="text/javascript">
+    $("#submitNextFrame").click(function(){
+        var currentFrame = {
+            markers: dataArrMarkers,
+            circles: dataArrCircles,
+            polygons: dataArrPolygons,
+            polylines: dataArrPolylines
+        };
+        frames.push(currentFrame);
+        $("#submitReset").trigger("click");
+    });
+</script>
+<button id="submitSaveAnimationToJson">Save Frame Animation to JSON</button>
+<script type="text/javascript">
+    $("#submitSaveAnimationToJson").click(function(){
+        $("#submitNextFrame").trigger("click");
+        var jsonstring = JSON.stringify(frames);
+        var element = document.createElement('a');
+        element.setAttribute('href', 'data:text/text;charset=utf-8,' + encodeURI(jsonstring));
+        element.setAttribute('download', "map_animation.json");
+        element.click();
+    });
+</script>
+<form>
+    Load Animation from JSON
+    <input type="file" id="submitLoadAnimationFromJson" onchange="
+        this.files[0].text().then(function(text){
+            console.log(text);
+            var jsonobj = JSON.parse(text);
+            frames = jsonobj;
+            updateMap();
+            updateTable();
+        });
+    ">
+</form>
+<button id="submitPlayAnimation">Play Animation</button>
+<script type="text/javascript">
+    $("#submitPlayAnimation").click(function(){
+        playAnimation();
+    });
+</script>
+
 
 <h3>Markers</h3>
 <table id="tableMarker" border="1">
@@ -71,7 +144,7 @@
     <input type="text" name="marker_x" id="marker_x" placeholder="marker_x" class="input_receive_x" value="51.508">
     <input type="text" name="marker_y" id="marker_y" placeholder="marker_y" class="input_receive_y" value="-0.11">
     <input type="text" name="marker_label" id="marker_label" placeholder="marker_label" value="marker 0">
-    <select name="marker_icon" id="marker_icon">
+    marker_icon: <select name="marker_icon" id="marker_icon">
         <option value='red'>red</option>
         <option value='purple'>purple</option>
         <option value='pink'>pink</option>
@@ -344,7 +417,11 @@ function updateMap(){
             iconSize: [25, 37], // size of the icon
             iconAnchor: [13, 34] // location of the "tip" of the icon (relative to its top left corner). The icon will be aligned so that this point is at the marker's geographical location
         })};
-        L.marker(item.coordinate, markerOption).addTo(map1).bindPopup(item.label);
+        L.marker(item.coordinate, markerOption).addTo(map1).bindPopup(item.label)
+        .on('click', function (e) {
+            $(".input_receive_x").val(e.latlng.lat);
+            $(".input_receive_y").val(e.latlng.lng);
+        });
     }
 
     // add new circles
@@ -356,52 +433,72 @@ function updateMap(){
                 color: item.linecolor,
                 fillColor: item.fillcolor,
                 fillOpacity: 0.5
-            }).addTo(map1).bindPopup(item.label);
+            }).addTo(map1).bindPopup(item.label)
+        .on('click', function (e) {
+            $(".input_receive_x").val(e.latlng.lat);
+            $(".input_receive_y").val(e.latlng.lng);
+        });
     }
 
     // add new polygon
     for (var i = 0; i < dataArrPolygons.length; i++) {
         item = dataArrPolygons[i];
-        L.polygon(item.coordinates, {color: item.linecolor}).addTo(map1).bindPopup(item.label);
+        L.polygon(item.coordinates, {color: item.linecolor}).addTo(map1).bindPopup(item.label)
+        .on('click', function (e) {
+            $(".input_receive_x").val(e.latlng.lat);
+            $(".input_receive_y").val(e.latlng.lng);
+        });
     }
     // temporary polygon
     //if(tempPolygon != null && tempPolygon != undefined) tempPolygon.remove();
     if(dataTempPolygon.coordinates.length > 1)
-        tempPolygon = L.polygon(dataTempPolygon.coordinates, {color: dataTempPolygon.linecolor}).addTo(map1).bindPopup(dataTempPolygon.label);
+        tempPolygon = L.polygon(dataTempPolygon.coordinates, {color: dataTempPolygon.linecolor}).addTo(map1).bindPopup(dataTempPolygon.label)
+        .on('click', function (e) {
+            $(".input_receive_x").val(e.latlng.lat);
+            $(".input_receive_y").val(e.latlng.lng);
+        });
 
     // add new polyline
     for (var i = 0; i < dataArrPolylines.length; i++) {
         item = dataArrPolylines[i];
-        L.polyline(item.coordinates, {color: item.linecolor}).addTo(map1).bindPopup(item.label);
+        L.polyline(item.coordinates, {color: item.linecolor}).addTo(map1).bindPopup(item.label)
+        .on('click', function (e) {
+            $(".input_receive_x").val(e.latlng.lat);
+            $(".input_receive_y").val(e.latlng.lng);
+        });
     }
     // temporary polyline
     //if(tempPolyline != null && tempPolyline != undefined) tempPolyline.remove();
     if(dataTempPolyline.coordinates.length > 1)
-        tempPolyline = L.polyline(dataTempPolyline.coordinates, {color: dataTempPolyline.linecolor}).addTo(map1).bindPopup(dataTempPolyline.label);
+        tempPolyline = L.polyline(dataTempPolyline.coordinates, {color: dataTempPolyline.linecolor}).addTo(map1).bindPopup(dataTempPolyline.label)
+        .on('click', function (e) {
+            $(".input_receive_x").val(e.latlng.lat);
+            $(".input_receive_y").val(e.latlng.lng);
+        });
 
 
 }
 
 function updateTable() {
-    $("#tableBodyCircle").html("");
-    for (var i = 0; i < dataArrCircles.length; i++) {
-        item = dataArrCircles[i]; // id, color, center, radius
-
-        $("#tableBodyCircle").append("<tr>"+
-            "<td>"+i+"</td>"+
-            "<td>"+item.fillcolor+" - "+item.linecolor+"</td>"+
-            "<td>"+item.coordinate_center[0]+" , "+item.coordinate_center[1]+"</td>"+
-            "<td>"+item.radius+"</td>"+
-            "<td>"+item.label+"</td>"+
-        "</tr>");
-    }
     $("#tableBodyMarker").html("");
     for (var i = 0; i < dataArrMarkers.length; i++) {
         item = dataArrMarkers[i]; // id, coordinate, radius
 
         $("#tableBodyMarker").append("<tr>"+
-            "<td>"+i+"</td>"+
+            "<td><button onclick='selectMarker("+i+")'>"+i+"</button></td>"+
             "<td>"+item.coordinate[0]+" , "+item.coordinate[1]+"</td>"+
+            "<td>"+item.label+"</td>"+
+        "</tr>");
+    }
+    $("#tableBodyCircle").html("");
+    for (var i = 0; i < dataArrCircles.length; i++) {
+        item = dataArrCircles[i]; // id, color, center, radius
+
+        $("#tableBodyCircle").append("<tr>"+
+            "<td><button onclick='selectCircle("+i+")'>"+i+"</button></td>"+
+            "<td>"+item.fillcolor+" - "+item.linecolor+"</td>"+
+            "<td>"+item.coordinate_center[0]+" , "+item.coordinate_center[1]+"</td>"+
+            "<td>"+item.radius+"</td>"+
             "<td>"+item.label+"</td>"+
         "</tr>");
     }
@@ -429,11 +526,52 @@ function updateTable() {
     }
 }
 
+function selectMarker(i) {
+    var item = dataArrMarkers[i];
+    $("#marker_id").val(i)
+    $("#marker_x").val(item.coordinate[0]);
+    $("#marker_y").val(item.coordinate[1]);
+    $("#marker_label").val(item.label);
+    $("#marker_icon").val(item.icon);
+}
+
+function selectCircle(i) {
+    var item = dataArrCircles[i];
+    $("#circle_id").val(i)
+    $("#circle_center_x").val(item.coordinate_center[0]);
+    $("#circle_center_y").val(item.coordinate_center[1]);
+    $("#circle_radius").val(item.radius);
+    $("#circle_label").val(item.label);
+    $("#circle_fillcolor").val(item.fillcolor);
+    $("#circle_linecolor").val(item.linecolor);
+}
+
+function playAnimation() {
+    var i = -1;
+    function loopFrame() {
+        setTimeout( function() {
+            i = i+1;
+            i = i%frames.length;
+            currentFrame = frames[i];
+            dataArrMarkers = currentFrame.markers;
+            dataArrCircles = currentFrame.circles;
+            dataArrPolygons = currentFrame.polygons;
+            dataArrPolylines = currentFrame.polylines;
+            updateMap();
+            updateTable();
+            loopFrame();
+        }, 1000);
+    }
+    loopFrame();
+
+}
+
 var map1 = initMap(
     'mapid', // map html id
     [52.5095347703273, 13.390960693359377], // center of map
     13, 18 // zoom and max zoom
 );
+var frames = [];
 var dataArrMarkers = [];
 var dataArrCircles = [];
 var dataArrPolygons = [];
@@ -446,7 +584,7 @@ var dataTempPolyline = {coordinates:[], label:"temp", linecolor:"white"};
 <script type="text/javascript">
     // shortcut
     $(document).keypress(function(event){
-        //console.log(event.charCode); // l=108
+        console.log(event.charCode);
         //console.log(event.target.tagName);
         if(event.target.tagName.toLowerCase() == "input") return;
 
@@ -464,6 +602,8 @@ var dataTempPolyline = {coordinates:[], label:"temp", linecolor:"white"};
             $("#submitPolylineVertex").trigger("click"); // k=107 // k is beside l (make polyline vertex)
         } else if(event.charCode==108){
             $("#submitPolyline").trigger("click"); // l=108 // add new polyline
+        } else if(event.charCode==110){
+            $("#submitNextFrame").trigger("click"); // n=110 // next frame
         }
     });
 </script>
