@@ -137,3 +137,5 @@
 - friendly UI
 - visible status from map view
 - responsive or adjusting map size to display size
+- drag to move marker / circle / polyline / polygon
+
