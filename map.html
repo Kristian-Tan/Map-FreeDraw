@@ -21,7 +21,7 @@
 
 <div id="mapid" style="width: 1280px; height: 720px;"></div>
 
-<h3>Control</h3>
+<h3>Map View Control</h3>
 <form>
     <input type="text" name="control_center_x" id="control_center_x" placeholder="control_center_x" class="input_receive_x">
     <input type="text" name="control_center_y" id="control_center_y" placeholder="control_center_y" class="input_receive_y">
@@ -34,8 +34,6 @@
         });
     </script>
 </form>
-
-
 <button id="submitReset">Reset</button>
 <script type="text/javascript">
     $("#submitReset").click(function(){
@@ -55,7 +53,31 @@
         updateTable();
     });
 </script>
+<button id="submitUndo">Undo</button>
+<script type="text/javascript">
+    $("#submitUndo").click(function(){
+        var last_addition = additionHistory.pop();
+        if(last_addition == null || last_addition == undefined) return;
+        else if(last_addition == "marker") {
+            dataArrMarkers.pop();
+            $("#marker_id").val((dataArrMarkers.length));
+        } else if(last_addition == "circle") {
+            dataArrCircles.pop();
+            $("#circle_id").val((dataArrCircles.length));
+        } else if(last_addition == "polygon") {
+            dataArrPolygons.pop();
+            $("#polygon_id").val((dataArrPolygons.length));
+        } else if(last_addition == "polyline") {
+            dataArrPolylines.pop();
+            $("#polyline_id").val((dataArrPolylines.length));
+        }
 
+        updateMap();
+        updateTable();
+    });
+</script>
+
+<h3>Save/Load Control</h3>
 <button id="submitSaveFrameToJson">Save Current Frame to JSON</button>
 <script type="text/javascript">
     $("#submitSaveFrameToJson").click(function(){
@@ -86,19 +108,7 @@
         });
     ">
 </form>
-<button id="submitNextFrame">Next Frame</button>
-<script type="text/javascript">
-    $("#submitNextFrame").click(function(){
-        var currentFrame = {
-            markers: dataArrMarkers,
-            circles: dataArrCircles,
-            polygons: dataArrPolygons,
-            polylines: dataArrPolylines
-        };
-        frames.push(currentFrame);
-        $("#submitReset").trigger("click");
-    });
-</script>
+
 <button id="submitSaveAnimationToJson">Save Frame Animation to JSON</button>
 <script type="text/javascript">
     $("#submitSaveAnimationToJson").click(function(){
@@ -122,6 +132,44 @@
         });
     ">
 </form>
+
+
+<h3>Animation Control</h3>
+<form>Reset Frame on Next Frame: <input type="checkbox" id="checkboxResetFrameOnNext" checked></form>
+<button id="submitNextFrame">Next Frame</button>
+<script type="text/javascript">
+    $("#submitNextFrame").click(function(){
+        if(dataArrMarkers.length == 0 && dataArrCircles.length == 0 && dataArrPolygons.length == 0 && dataArrPolylines.length == 0) {
+            alert("Cannot move to next frame: current frame is empty. To add an empty frame, please use 'empty frame' command.");
+            return;
+        }
+        var currentFrame = {
+            markers: dataArrMarkers,
+            circles: dataArrCircles,
+            polygons: dataArrPolygons,
+            polylines: dataArrPolylines
+        };
+        frames.push(currentFrame);
+        if( $("#checkboxResetFrameOnNext").prop("checked") ) $("#submitReset").trigger("click");
+    });
+</script>
+<button id="submitEmptyFrame">Add an Empty Frame</button>
+<script type="text/javascript">
+    $("#submitEmptyFrame").click(function(){
+        if(dataArrMarkers.length > 0 || dataArrCircles.length > 0 || dataArrPolygons.length > 0 || dataArrPolylines.length > 0) {
+            alert("Cannot add an empty frame: current frame is not empty. To add new frame, please use 'next frame' command. To clear current frame, please use 'reset' command.");
+            return;
+        }
+        var currentFrame = {
+            markers: [],
+            circles: [],
+            polygons: [],
+            polylines: []
+        };
+        frames.push(currentFrame);
+        $("#submitReset").trigger("click");
+    });
+</script>
 <button id="submitPlayAnimation">Play Animation</button>
 <script type="text/javascript">
     $("#submitPlayAnimation").click(function(){
@@ -135,6 +183,7 @@
     <tr>
         <th>ID</th>
         <th>Coordinate</th>
+        <th>Icon</th>
         <th>Label</th>
         <tbody id="tableBodyMarker"></tbody>
     </tr>
@@ -156,12 +205,16 @@
         <option value='green'>green</option>
         <option value='blue'>blue</option>
     </select>
-    <input type="submit" id="submitMarker">
+    <input type="submit" id="submitMarker" value="Add to Frame">
     <script type="text/javascript">
         $("#submitMarker").click(function(event){
             event.preventDefault();
 
-            dataArrMarkers[parseInt($("#marker_id").val())] = {
+            var id = parseInt($("#marker_id").val());
+            if(id < dataArrMarkers.length) additionHistory.push(null);
+            else additionHistory.push("marker");
+
+            dataArrMarkers[id] = {
                 coordinate: [
                     parseFloat($("#marker_x").val()),
                     parseFloat($("#marker_y").val())
@@ -194,16 +247,34 @@
     <input type="text" name="circle_id" id="circle_id" placeholder="circle_id" value="0">
     <input type="text" name="circle_center_x" id="circle_center_x" placeholder="circle_center_x" class="input_receive_x" value="51.508">
     <input type="text" name="circle_center_y" id="circle_center_y" placeholder="circle_center_y" class="input_receive_y" value="-0.11">
+
     <input type="text" name="circle_radius" id="circle_radius" placeholder="circle_radius" value="500">
+        <button id="buttonCircleRadiusDown10000" class="circle_radius_down circle_radius_offset" data-offset="-10000">DOWN 10000</button>
+        <button id="buttonCircleRadiusDown2000" class="circle_radius_down circle_radius_offset" data-offset="-2000">DOWN 2000</button>
+        <button id="buttonCircleRadiusDown500" class="circle_radius_down circle_radius_offset" data-offset="-500">DOWN 500</button>
+        <button id="buttonCircleRadiusDown100" class="circle_radius_down circle_radius_offset" data-offset="-100">DOWN 100</button>
+        <button id="buttonCircleRadiusDown20" class="circle_radius_down circle_radius_offset" data-offset="-20">DOWN 20</button>
+
+        <button id="buttonCircleRadiusUp20" class="circle_radius_up circle_radius_offset" data-offset="20">UP 20</button>
+        <button id="buttonCircleRadiusUp100" class="circle_radius_up circle_radius_offset" data-offset="100">UP 100</button>
+        <button id="buttonCircleRadiusUp500" class="circle_radius_up circle_radius_offset" data-offset="500">UP 500</button>
+        <button id="buttonCircleRadiusUp2000" class="circle_radius_up circle_radius_offset" data-offset="2000">UP 2000</button>
+        <button id="buttonCircleRadiusUp10000" class="circle_radius_up circle_radius_offset" data-offset="10000">UP 10000</button>
+
+
     <input type="text" name="circle_label" id="circle_label" placeholder="circle_label" value="circle 0">
     <input type="text" name="circle_fillcolor" id="circle_fillcolor" placeholder="circle_fillcolor" value="green">
     <input type="text" name="circle_linecolor" id="circle_linecolor" placeholder="circle_linecolor" value="white">
-    <input type="submit" id="submitCircle">
+    <input type="submit" id="submitCircle" value="Add to Frame">
     <script type="text/javascript">
         $("#submitCircle").click(function(event){
             event.preventDefault();
 
-            dataArrCircles[parseInt($("#circle_id").val())] = {
+            var id = parseInt($("#circle_id").val());
+            if(id < dataArrCircles.length) additionHistory.push(null);
+            else additionHistory.push("circle");
+
+            dataArrCircles[id] = {
                 coordinate_center: [
                     parseFloat($("#circle_center_x").val()),
                     parseFloat($("#circle_center_y").val())
@@ -218,6 +289,16 @@
             updateTable();
             $("#circle_label").val("circle " + (dataArrCircles.length));
             $("#circle_id").val((dataArrCircles.length));
+        });
+    </script>
+    <script type="text/javascript">
+        $(".circle_radius_offset").click(function(e){
+            e.preventDefault();
+            var offset = $(this).data("offset");
+            var oldvalue = parseFloat($("#circle_radius").val());
+            var newvalue = oldvalue + offset;
+            if(newvalue < 0) newvalue = 0; // floor at 0
+            $("#circle_radius").val( newvalue );
         });
     </script>
 </form>
@@ -240,7 +321,7 @@
     <input type="text" name="polygon_y_last" id="polygon_y_last" placeholder="polygon_y_last" class="input_receive_y" value="-0.11">
     <div id="container_polygon_vertex"></div>
     <input type="submit" id="submitPolygonVertex" value="Add Vertex">
-    <input type="submit" id="submitPolygon">
+    <input type="submit" id="submitPolygon" value="Add to Frame">
     <script type="text/javascript">
         $("#submitPolygonVertex").click(function(event){
             event.preventDefault();
@@ -258,6 +339,10 @@
         $("#submitPolygon").click(function(event){
             event.preventDefault();
 
+            var id = parseInt($("#polygon_id").val());
+            if(id < dataArrPolygons.length) additionHistory.push(null);
+            else additionHistory.push("polygon");
+
             temp_coordinates = [];
             var num_of_vertex = $(".polygon_x").length;
             for (var i = 0; i < num_of_vertex; i++) {
@@ -265,7 +350,7 @@
                 var current_y = $($(".polygon_y")[i]).val();
                 temp_coordinates.push([current_x, current_y]);
             }
-            dataArrPolygons[parseInt($("#polygon_id").val())] = {
+            dataArrPolygons[id] = {
                 coordinates: temp_coordinates,
                 label: $("#polygon_label").val(),
                 linecolor: $("#polygon_linecolor").val()
@@ -302,7 +387,7 @@
     <input type="text" name="polyline_y_last" id="polyline_y_last" placeholder="polyline_y_last" class="input_receive_y" value="-0.11">
     <div id="container_polyline_vertex"></div>
     <input type="submit" id="submitPolylineVertex" value="Add Vertex">
-    <input type="submit" id="submitPolyline">
+    <input type="submit" id="submitPolyline" value="Add to Frame">
     <script type="text/javascript">
         $("#submitPolylineVertex").click(function(event){
             event.preventDefault();
@@ -320,6 +405,10 @@
         $("#submitPolyline").click(function(event){
             event.preventDefault();
 
+            var id = parseInt($("#polyline_id").val());
+            if(id < dataArrPolylines.length) additionHistory.push(null);
+            else additionHistory.push("polyline");
+
             temp_coordinates = [];
             var num_of_vertex = $(".polyline_x").length;
             for (var i = 0; i < num_of_vertex; i++) {
@@ -327,7 +416,7 @@
                 var current_y = $($(".polyline_y")[i]).val();
                 temp_coordinates.push([current_x, current_y]);
             }
-            dataArrPolylines[parseInt($("#polyline_id").val())] = {
+            dataArrPolylines[id] = {
                 coordinates: temp_coordinates,
                 label: $("#polyline_label").val(),
                 linecolor: $("#polyline_linecolor").val()
@@ -344,6 +433,92 @@
         });
     </script>
 </form>
+
+
+<h3>Shortcut</h3>
+<input type="text" placeholder="shortcut_input_currentkey" id="shortcut_input_currentkey" value="NONE">
+<div id="shortcut_container"></div>
+<button id="submitShortcutAdd">Add New Shortcut</button>
+<script type="text/javascript">
+    // shortcut
+    $(document).keypress(function(event) {
+        console.log(event.charCode);
+        if(event.target.tagName.toLowerCase() == "input") return;
+
+        var char = String.fromCodePoint(event.charCode);
+        $("#shortcut_input_currentkey").val(char);
+
+        var cmd_idx = $("input.shortcut_input_key[value='"+char+"']").data("idx");
+        console.log(cmd_idx);
+        var btn_name = $("input.shortcut_input_button[data-idx='"+cmd_idx+"']").val();
+        $("#"+btn_name).trigger("click");
+    });
+
+    // string to charCode : "n".charCodeAt(0) // return 110
+    // charCode to string : String.fromCodePoint(110) // return "n"
+    var shortcuts = [
+        {code: 99, button: "submitCircle", char: "c"}, // c / circle
+        {code: 109, button: "submitMarker", char: "m"}, // m / marker
+        {code: 96, button: "submitReset", char: "`"}, // ` or ~
+        {code: 111, button: "submitPolygonVertex", char: "o"}, // o / o is next to p in keyboard
+        {code: 112, button: "submitPolygon", char: "p"}, // p / polygon
+        {code: 107, button: "submitPolylineVertex", char: "k"}, // k / k is next to l in keyboard
+        {code: 108, button: "submitPolyline", char: "l"}, // l / line
+        {code: 110, button: "submitNextFrame", char: "n"}, // n // next frame
+        {code: 101, button: "submitEmptyFrame", char: "e"}, // e / empty frame
+        {code: 116, button: "checkboxTriggerOnClick", char: "t"}, // t / trigger on click / toggle
+        {code: 121, button: "submitChangeTriggerOnClick", char: "y"}, // y / y is next to t in keyboard
+        {code: 122, button: "submitUndo", char: "z"}, // undo last addition (won't work with edit)
+
+        {code: 49, button: "buttonCircleRadiusDown10000", char: "1"},
+        {code: 50, button: "buttonCircleRadiusDown2000", char: "2"},
+        {code: 51, button: "buttonCircleRadiusDown500", char: "3"},
+        {code: 52, button: "buttonCircleRadiusDown100", char: "4"},
+        {code: 53, button: "buttonCircleRadiusDown20", char: "5"},
+        {code: 54, button: "buttonCircleRadiusUp20", char: "6"},
+        {code: 55, button: "buttonCircleRadiusUp100", char: "7"},
+        {code: 56, button: "buttonCircleRadiusUp500", char: "8"},
+        {code: 57, button: "buttonCircleRadiusUp2000", char: "9"},
+        {code: 48, button: "buttonCircleRadiusUp10000", char: "0"},
+
+    ];
+    $("#shortcut_container").html("");
+    for (var i = 0; i < shortcuts.length; i++) {
+        $("#shortcut_container").append(`
+            <div>
+                <input type="text" class="shortcut_input_key" id="shortcut_input_key`+i+`" value="`+shortcuts[i].char+`" data-idx="`+i+`">
+                <input type="text" class="shortcut_input_button" id="shortcut_input_button`+i+`" value="`+shortcuts[i].button+`" data-idx="`+i+`">
+            </div>
+        `);
+    }
+
+    $("#submitShortcutAdd").click(function(){
+        var i = shortcuts.length;
+        $("#shortcut_container").append(`
+            <div>
+                <input type="text" class="shortcut_input_key" id="shortcut_input_key`+i+`" data-idx="`+i+`">
+                <input type="text" class="shortcut_input_button" id="shortcut_input_button`+i+`" data-idx="`+i+`">
+            </div>
+        `);
+    });
+</script>
+
+<form>
+    Trigger on click: <input type="checkbox" id="checkboxTriggerOnClick">
+    <input type="text" id="shortcut_input_triggeronclick" value="submitMarker">
+</form>
+<button id="submitChangeTriggerOnClick">Change Trigger On Click</button>
+<script type="text/javascript">
+    $("#submitChangeTriggerOnClick").click(function(){
+        var target_key = prompt("Which key should be triggered with next click?");
+        var char = target_key.substr(0, 1);
+
+        var cmd_idx = $("input.shortcut_input_key[value='"+char+"']").data("idx");
+        var btn_name = $("input.shortcut_input_button[data-idx='"+cmd_idx+"']").val();
+
+        $("#shortcut_input_triggeronclick").val(btn_name); // change this
+    });
+</script>
 
 <script>
 
@@ -365,8 +540,10 @@ function initMap(argMapHtmlId, argCenterArr, argCenterZoom, argMaxZoom)
             .openOn(mymap);
 
         //console.log(e.latlng.lat);
-        $(".input_receive_x").val(e.latlng.lat);
-        $(".input_receive_y").val(e.latlng.lng);
+        //$(".input_receive_x").val(e.latlng.lat);
+        //$(".input_receive_y").val(e.latlng.lng);
+        functionToHandleClick = createFunctionToHandleClick("map", -1);
+        functionToHandleClick(e)
     });
     mymap.on('zoom', function (e) {
         //console.log(e.target._zoom);
@@ -418,10 +595,7 @@ function updateMap(){
             iconAnchor: [13, 34] // location of the "tip" of the icon (relative to its top left corner). The icon will be aligned so that this point is at the marker's geographical location
         })};
         L.marker(item.coordinate, markerOption).addTo(map1).bindPopup(item.label)
-        .on('click', function (e) {
-            $(".input_receive_x").val(e.latlng.lat);
-            $(".input_receive_y").val(e.latlng.lng);
-        });
+        .on('click', createFunctionToHandleClick("marker",i) );
     }
 
     // add new circles
@@ -434,29 +608,20 @@ function updateMap(){
                 fillColor: item.fillcolor,
                 fillOpacity: 0.5
             }).addTo(map1).bindPopup(item.label)
-        .on('click', function (e) {
-            $(".input_receive_x").val(e.latlng.lat);
-            $(".input_receive_y").val(e.latlng.lng);
-        });
+        .on('click', createFunctionToHandleClick("circle",i) );
     }
 
     // add new polygon
     for (var i = 0; i < dataArrPolygons.length; i++) {
         item = dataArrPolygons[i];
         L.polygon(item.coordinates, {color: item.linecolor}).addTo(map1).bindPopup(item.label)
-        .on('click', function (e) {
-            $(".input_receive_x").val(e.latlng.lat);
-            $(".input_receive_y").val(e.latlng.lng);
-        });
+        .on('click', createFunctionToHandleClick("polygon",i) );
     }
     // temporary polygon
     //if(tempPolygon != null && tempPolygon != undefined) tempPolygon.remove();
     if(dataTempPolygon.coordinates.length > 1)
         tempPolygon = L.polygon(dataTempPolygon.coordinates, {color: dataTempPolygon.linecolor}).addTo(map1).bindPopup(dataTempPolygon.label)
-        .on('click', function (e) {
-            $(".input_receive_x").val(e.latlng.lat);
-            $(".input_receive_y").val(e.latlng.lng);
-        });
+        .on('click', createFunctionToHandleClick("polyline",i) );
 
     // add new polyline
     for (var i = 0; i < dataArrPolylines.length; i++) {
@@ -479,6 +644,42 @@ function updateMap(){
 
 }
 
+function createFunctionToHandleClick(type=null, i=-1) {
+    if(type=="marker") {
+        return function(e){
+            $(".input_receive_x").val(e.latlng.lat);
+            $(".input_receive_y").val(e.latlng.lng);
+            if( $("#checkboxTriggerOnClick").prop("checked") )
+            {
+                var triggeronclick = $("#shortcut_input_triggeronclick").val();
+                $("#"+triggeronclick).trigger("click");
+            }
+            selectMarker(i);
+        }
+    } else if(type=="circle") {
+        return function(e){
+            $(".input_receive_x").val(e.latlng.lat);
+            $(".input_receive_y").val(e.latlng.lng);
+            if( $("#checkboxTriggerOnClick").prop("checked") )
+            {
+                var triggeronclick = $("#shortcut_input_triggeronclick").val();
+                $("#"+triggeronclick).trigger("click");
+            }
+            selectCircle(i);
+        }
+    } else {
+        return function(e){
+            $(".input_receive_x").val(e.latlng.lat);
+            $(".input_receive_y").val(e.latlng.lng);
+            if( $("#checkboxTriggerOnClick").prop("checked") )
+            {
+                var triggeronclick = $("#shortcut_input_triggeronclick").val();
+                $("#"+triggeronclick).trigger("click");
+            }
+        }
+    }
+}
+
 function updateTable() {
     $("#tableBodyMarker").html("");
     for (var i = 0; i < dataArrMarkers.length; i++) {
@@ -487,6 +688,7 @@ function updateTable() {
         $("#tableBodyMarker").append("<tr>"+
             "<td><button onclick='selectMarker("+i+")'>"+i+"</button></td>"+
             "<td>"+item.coordinate[0]+" , "+item.coordinate[1]+"</td>"+
+            "<td>"+item.icon+"</td>"+
             "<td>"+item.label+"</td>"+
         "</tr>");
     }
@@ -572,6 +774,7 @@ var map1 = initMap(
     13, 18 // zoom and max zoom
 );
 var frames = [];
+var additionHistory = [];
 var dataArrMarkers = [];
 var dataArrCircles = [];
 var dataArrPolygons = [];
@@ -582,37 +785,11 @@ var dataTempPolyline = {coordinates:[], label:"temp", linecolor:"white"};
 </script>
 
 <script type="text/javascript">
-    // shortcut
-    $(document).keypress(function(event){
-        console.log(event.charCode);
-        //console.log(event.target.tagName);
-        if(event.target.tagName.toLowerCase() == "input") return;
-
-        if(event.charCode==99){
-            $("#submitCircle").trigger("click"); // c=99 // add new circle
-        } else if(event.charCode==109){
-            $("#submitMarker").trigger("click"); // m=109 // add new marker
-        } else if(event.charCode==96){
-            $("#submitReset").trigger("click"); // r=114 or tilde=96 // remove / reset all
-        } else if(event.charCode==111){
-            $("#submitPolygonVertex").trigger("click"); // o=111 // o is beside p (make polygon vertex)
-        } else if(event.charCode==112){
-            $("#submitPolygon").trigger("click"); // p=112 // add new polygon
-        } else if(event.charCode==107){
-            $("#submitPolylineVertex").trigger("click"); // k=107 // k is beside l (make polyline vertex)
-        } else if(event.charCode==108){
-            $("#submitPolyline").trigger("click"); // l=108 // add new polyline
-        } else if(event.charCode==110){
-            $("#submitNextFrame").trigger("click"); // n=110 // next frame
-        }
+    $("[placeholder]").each(function() {
+        var ph = this.placeholder;
+        //$(this).removeAttr("placeholder");
+        $(this).wrap("<div><label class=" + ph + "-label>" + ph + ":</label>");
     });
-</script>
-<script type="text/javascript">
-      $("[placeholder]").each(function() {
-          var ph = this.placeholder;
-          //$(this).removeAttr("placeholder");
-          $(this).wrap("<div><label class=" + ph + "-label>" + ph + ":</label>");
-      })
 </script>
 
 
